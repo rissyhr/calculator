@@ -48,6 +48,8 @@ const (
 	Number tokenKind = iota
 	Plus
 	Minus
+	Mul
+	Div
 )
 
 // Tokenize lexes a given line, breaking it down into its component
@@ -64,6 +66,10 @@ func tokenize(line string) []token {
 			tok, index = readPlus(line, index)
 		case line[index] == '-':
 			tok, index = readMinus(line, index)
+		case line[index] == '*':
+			tok, index = readMul(line, index)
+		case line[index] == '/':
+			tok, index = readDiv(line, index)
 		default:
 			log.Panicf("invalid character: '%c' at index=%v in %v", line[index], index, line)
 		}
@@ -77,6 +83,20 @@ func tokenize(line string) []token {
 func evaluate(tokens []token) float64 {
 	answer := float64(0)
 	index := 0
+
+	for index < len(tokens) {
+		switch tokens[index].kind {
+		case Mul:
+			tokens = replaceMul(tokens, index)
+		case Div:
+			tokens = replaceDiv(tokens, index)
+		default:
+			index++
+		}
+	}
+
+	index = 0
+
 	for index < len(tokens) {
 		switch tokens[index].kind {
 		case Number:
@@ -89,9 +109,31 @@ func evaluate(tokens []token) float64 {
 				log.Panicf("invalid syntax for tokens: %v", tokens)
 			}
 		}
-		index += 1
+		index++
 	}
 	return answer
+}
+
+func replaceMul(tokens []token, index int) []token {
+	number := float64(0)
+	// assign A * B (= C) to number
+	number = tokens[index-1].number * tokens[index+1].number
+	// delete token{Number, A}, token{Mul, 0} and token{Number, B} from tokens
+	tokens = append(tokens[:index-1], tokens[index+2:]...)
+	// insert token{Number, C} into tokens
+	tokens = append(tokens[:index-1], append([]token{token{Number, number}}, tokens[index-1:]...)...)
+	return tokens
+}
+
+func replaceDiv(tokens []token, index int) []token {
+	number := float64(0)
+	// assign A / B (= C) to number
+	number = tokens[index-1].number / tokens[index+1].number
+	// delete token{Number, A}, token{Mul, 0} and token{Number, B} from tokens
+	tokens = append(tokens[:index-1], tokens[index+2:]...)
+	// insert token{Number, C} into tokens
+	tokens = append(tokens[:index-1], append([]token{token{Number, number}}, tokens[index-1:]...)...)
+	return tokens
 }
 
 func readPlus(line string, index int) (token, int) {
@@ -100,6 +142,14 @@ func readPlus(line string, index int) (token, int) {
 
 func readMinus(line string, index int) (token, int) {
 	return token{Minus, 0}, index + 1
+}
+
+func readMul(line string, index int) (token, int) {
+	return token{Mul, 0}, index + 1
+}
+
+func readDiv(line string, index int) (token, int) {
+	return token{Div, 0}, index + 1
 }
 
 func readNumber(line string, index int) (token, int) {
@@ -120,7 +170,7 @@ DigitLoop:
 			// "break DigitLoop" here means to break from the labeled for loop, rather than the switch statement. https://golang.org/ref/spec#Break_statements
 			break DigitLoop
 		}
-		index += 1
+		index++
 	}
 	return token{Number, number * keta}, index
 }
