@@ -82,8 +82,13 @@ func tokenize(line string) []token {
 // tokens.
 func evaluate(tokens []token) float64 {
 	answer := float64(0)
-	index := 0
+	tokens = evaluateMulDiv(tokens)
+	tokens, answer = evaluatePlusMinus(tokens)
+	return answer
+}
 
+func evaluateMulDiv(tokens []token) []token {
+	index := 0
 	for index < len(tokens) {
 		switch tokens[index].kind {
 		case Mul:
@@ -94,9 +99,12 @@ func evaluate(tokens []token) float64 {
 			index++
 		}
 	}
+	return tokens
+}
 
-	index = 0
-
+func evaluatePlusMinus(tokens []token) ([]token, float64) {
+	index := 0
+	answer := float64(0)
 	for index < len(tokens) {
 		switch tokens[index].kind {
 		case Number:
@@ -111,7 +119,7 @@ func evaluate(tokens []token) float64 {
 		}
 		index++
 	}
-	return answer
+	return tokens, answer
 }
 
 func replaceMul(tokens []token, index int) []token {
