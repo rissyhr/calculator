@@ -50,6 +50,8 @@ const (
 	Minus
 	Mul
 	Div
+	Left
+	Right
 )
 
 // Tokenize lexes a given line, breaking it down into its component
@@ -70,6 +72,10 @@ func tokenize(line string) []token {
 			tok, index = readMul(line, index)
 		case line[index] == '/':
 			tok, index = readDiv(line, index)
+		case line[index] == '(':
+			tok, index = readLeft(line, index)
+		case line[index] == ')':
+			tok, index = readRight(line, index)
 		default:
 			log.Panicf("invalid character: '%c' at index=%v in %v", line[index], index, line)
 		}
@@ -81,12 +87,39 @@ func tokenize(line string) []token {
 // Evaluate computes the numeric value expressed by a series of
 // tokens.
 func evaluate(tokens []token) float64 {
-	answer := float64(0)
+	tokens = evaluateLeftRight(tokens)
 	tokens = evaluateMulDiv(tokens)
-	tokens, answer = evaluatePlusMinus(tokens)
+	_, answer := evaluatePlusMinus(tokens)
 	return answer
 }
 
+// EvaluateLeftRight removes ( ) in tokens
+func evaluateLeftRight(tokens []token) []token {
+	index := 0
+	for index < len(tokens) {
+		switch tokens[index].kind {
+		case Right:
+			rightIndex := index
+			for i := rightIndex - 1; i > -1; i-- {
+				switch tokens[i].kind {
+				case Left:
+					leftIndex := i
+					innerTokens := append([]token{token{Plus, 0}}, tokens[leftIndex+1:rightIndex]...)
+					innerTokens = evaluateMulDiv(innerTokens)
+					_, innerNumber := evaluatePlusMinus(innerTokens)
+					// delete tokens[leftIndex : rightIndex+1] from tokens
+					tokens = append(tokens[:leftIndex], tokens[rightIndex+1:]...)
+					// insert token{Number, innerNumber} into tokens
+					tokens = append(tokens[:leftIndex], append([]token{token{Number, innerNumber}}, tokens[leftIndex:]...)...)
+				}
+			}
+		}
+		index++
+	}
+	return tokens
+}
+
+// EvaluateMulDiv removes * / in tokens
 func evaluateMulDiv(tokens []token) []token {
 	index := 0
 	for index < len(tokens) {
@@ -102,6 +135,7 @@ func evaluateMulDiv(tokens []token) []token {
 	return tokens
 }
 
+// EvaluatePlusMinus removes + - in tokens
 func evaluatePlusMinus(tokens []token) ([]token, float64) {
 	index := 0
 	answer := float64(0)
@@ -158,6 +192,13 @@ func readMul(line string, index int) (token, int) {
 
 func readDiv(line string, index int) (token, int) {
 	return token{Div, 0}, index + 1
+}
+func readLeft(line string, index int) (token, int) {
+	return token{Left, 0}, index + 1
+}
+
+func readRight(line string, index int) (token, int) {
+	return token{Right, 0}, index + 1
 }
 
 func readNumber(line string, index int) (token, int) {
