@@ -129,7 +129,7 @@ func replaceDiv(tokens []token, index int) []token {
 	number := float64(0)
 	// assign A / B (= C) to number
 	number = tokens[index-1].number / tokens[index+1].number
-	// delete token{Number, A}, token{Mul, 0} and token{Number, B} from tokens
+	// delete token{Number, A}, token{Div, 0} and token{Number, B} from tokens
 	tokens = append(tokens[:index-1], tokens[index+2:]...)
 	// insert token{Number, C} into tokens
 	tokens = append(tokens[:index-1], append([]token{token{Number, number}}, tokens[index-1:]...)...)
