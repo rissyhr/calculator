@@ -93,16 +93,17 @@ func evaluate(tokens []token) float64 {
 	return answer
 }
 
-// EvaluateLeftRight removes ( ) in tokens
+// EvaluateLeftRight removes '(' and ')' in tokens
 func evaluateLeftRight(tokens []token) []token {
 	index := 0
+	// search ')'
 	for index < len(tokens) {
-		switch tokens[index].kind {
-		case Right:
+		if tokens[index].kind == Right {
 			rightIndex := index
+		RightLoop:
+			// search the nearest '('
 			for i := rightIndex - 1; i > -1; i-- {
-				switch tokens[i].kind {
-				case Left:
+				if tokens[i].kind == Left {
 					leftIndex := i
 					innerTokens := append([]token{token{Plus, 0}}, tokens[leftIndex+1:rightIndex]...)
 					innerTokens = evaluateMulDiv(innerTokens)
@@ -111,6 +112,9 @@ func evaluateLeftRight(tokens []token) []token {
 					tokens = append(tokens[:leftIndex], tokens[rightIndex+1:]...)
 					// insert token{Number, innerNumber} into tokens
 					tokens = append(tokens[:leftIndex], append([]token{token{Number, innerNumber}}, tokens[leftIndex:]...)...)
+					// move index from rightIndex to leftIndex
+					index = leftIndex
+					break RightLoop
 				}
 			}
 		}
@@ -119,7 +123,7 @@ func evaluateLeftRight(tokens []token) []token {
 	return tokens
 }
 
-// EvaluateMulDiv removes * / in tokens
+// EvaluateMulDiv removes '*' and '/' in tokens
 func evaluateMulDiv(tokens []token) []token {
 	index := 0
 	for index < len(tokens) {
@@ -135,13 +139,12 @@ func evaluateMulDiv(tokens []token) []token {
 	return tokens
 }
 
-// EvaluatePlusMinus removes + - in tokens
+// EvaluatePlusMinus removes '+' and '-' in tokens
 func evaluatePlusMinus(tokens []token) ([]token, float64) {
 	index := 0
 	answer := float64(0)
 	for index < len(tokens) {
-		switch tokens[index].kind {
-		case Number:
+		if tokens[index].kind == Number {
 			switch tokens[index-1].kind {
 			case Plus:
 				answer += tokens[index].number
